@@ -1,0 +1,81 @@
+---
+title: "Complete a maintenance task"
+description: "Step-by-step guide to closing an open maintenance record and restoring equipment to operational status."
+---
+
+This workflow covers closing an open maintenance record by setting the completion date and adding a work description. Completing a record automatically returns the equipment to operational status and updates its next scheduled maintenance date.
+
+<Steps>
+  <Step title="Navigate to the maintenance page">
+    Go to `/pages/mantenimientos.php`. The table lists all maintenance records, both open and closed.
+  </Step>
+
+  <Step title="Identify the open maintenance record">
+    Scan the **Fecha Fin** column for records with an empty value. An empty Fecha Fin means the maintenance task is still open.
+
+    Use the **Código Equipo**, **Sala**, and **Sede** columns to confirm you have found the correct record.
+  </Step>
+
+  <Step title="Click Editar">
+    Click the **Editar** button on the open maintenance record row. The edit form loads with the current record's data.
+  </Step>
+
+  <Step title="Note the disabled equipment field">
+    The equipment field is displayed as a **disabled text input** showing the equipment code, not a dropdown. The equipment assignment cannot be changed after a maintenance record is created.
+
+    <Info>
+      This is intentional. Changing the equipment on an existing maintenance record would corrupt the status tracking for both the original and new equipment.
+    </Info>
+  </Step>
+
+  <Step title="Set the completion date">
+    Enter the **Fecha Fin** (completion date) — the date the maintenance work was finished.
+
+    Setting this field is what triggers the equipment status update. The system will:
+
+    1. Save the completion date:
+
+    ```sql
+    UPDATE mantenimientos SET fechafin = '$fechafin' WHERE id = '$id'
+    ```
+
+    2. Restore the equipment to operational:
+
+    ```sql
+    UPDATE equipos SET estado = 1 WHERE id = '$idequipo'
+    ```
+  </Step>
+
+  <Step title="Fill in the work description">
+    Enter a detailed account of the work performed in the **Descripción** field.
+
+    <Tip>
+      Always fill in the description even when it seems obvious. The description field forms part of the permanent maintenance audit trail and is essential for tracking recurring issues, planning future maintenance, and demonstrating compliance.
+    </Tip>
+  </Step>
+
+  <Step title="Submit the form">
+    Click submit. The maintenance record is updated and the equipment status changes back to `1` (Funcionamiento).
+  </Step>
+
+  <Step title="Verify the changes">
+    Confirm the following after submitting:
+
+    - The maintenance record in the table now shows a **Fecha Fin** value.
+    - On the equipment page (`/pages/equipos.php`), the equipment's **Estado** column shows `Funcionamiento`.
+    - The **Fecha Siguiente Mantenimiento** column has been recalculated as `fechafin + 180 days`.
+  </Step>
+</Steps>
+
+## After completing maintenance
+
+The equipment is now available to be scheduled for future maintenance tasks. The next maintenance date is automatically displayed in the equipment table.
+
+<CardGroup cols={2}>
+  <Card title="View maintenance history" icon="clock-rotate-left" href="/modules/equipment">
+    Use the Ver button on the equipment page to see the full maintenance history for a specific equipment item.
+  </Card>
+  <Card title="Schedule a maintenance task" icon="wrench" href="/workflows/schedule-maintenance">
+    Create the next maintenance record when the scheduled date approaches.
+  </Card>
+</CardGroup>

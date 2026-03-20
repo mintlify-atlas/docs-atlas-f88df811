@@ -1,0 +1,236 @@
+---
+title: "Installation"
+description: "Detailed installation guide for Sistema de Mantenimientos on Apache, Nginx, and local development environments."
+---
+
+## Requirements
+
+| Component | Minimum version |
+|-----------|----------------|
+| PHP | 8.2 |
+| MySQL | 5.7 |
+| MariaDB | 10.x |
+| Apache | 2.4 |
+| Nginx | 1.18 |
+
+Required PHP extensions: `mysqli`, `mbstring`
+
+## Installation steps
+
+<Steps>
+  <Step title="Obtain the project files">
+    Clone the repository or extract the downloaded archive into your web server's document root.
+
+    ```bash
+    git clone https://github.com/your-org/sistema-mantenimientos.git /var/www/html/mantenimientos
+    ```
+
+    Confirm the directory structure looks like this:
+
+    ```
+    mantenimientos/
+    ├── config/
+    │   └── database.php
+    ├── layout/
+    │   ├── header.php
+    │   └── footer.php
+    ├── pages/
+    │   ├── sedes.php
+    │   ├── salas.php
+    │   ├── monitores.php
+    │   ├── equipos.php
+    │   ├── mantenimientos.php
+    │   └── ver-mantenimientos.php
+    ├── index.php
+    └── mantenimientos (1).sql
+    ```
+  </Step>
+
+  <Step title="Create the MySQL database">
+    Connect to MySQL and create the application database.
+
+    ```sql
+    CREATE DATABASE mantenimientos
+      CHARACTER SET utf8mb4
+      COLLATE utf8mb4_unicode_ci;
+    ```
+
+    Create a dedicated application user and grant it access:
+
+    ```sql
+    CREATE USER 'mantenimientos_user'@'localhost' IDENTIFIED BY 'strong_password_here';
+    GRANT ALL PRIVILEGES ON mantenimientos.* TO 'mantenimientos_user'@'localhost';
+    FLUSH PRIVILEGES;
+    ```
+  </Step>
+
+  <Step title="Import the database schema">
+    Import the bundled SQL dump from the project root.
+
+    ```bash
+    mysql -u mantenimientos_user -p mantenimientos < "mantenimientos (1).sql"
+    ```
+
+    Verify the tables were created:
+
+    ```sql
+    USE mantenimientos;
+    SHOW TABLES;
+    ```
+
+    You should see: `equipos`, `mantenimientos`, `marcas`, `monitores`, `salas`, `sedes`.
+  </Step>
+
+  <Step title="Configure the database connection">
+    Edit `config/database.php` with your database credentials.
+
+    ```php
+    <?php
+    $host     = 'localhost';
+    $user     = 'mantenimientos_user';
+    $password = 'strong_password_here';
+    $database = 'mantenimientos';
+
+    $dbConnection = mysqli_connect($host, $user, $password, $database);
+
+    if (!$dbConnection) {
+        echo 'Error en la conexión';
+    }
+    ```
+  </Step>
+
+  <Step title="Configure your web server">
+    Choose your web server below and apply the corresponding configuration.
+
+    <Tabs>
+      <Tab title="Apache">
+        Create a virtual host configuration file at `/etc/apache2/sites-available/mantenimientos.conf`:
+
+        ```apache
+        <VirtualHost *:80>
+            ServerName mantenimientos.local
+            DocumentRoot /var/www/html/mantenimientos
+
+            <Directory /var/www/html/mantenimientos>
+                Options -Indexes +FollowSymLinks
+                AllowOverride All
+                Require all granted
+            </Directory>
+
+            ErrorLog ${APACHE_LOG_DIR}/mantenimientos_error.log
+            CustomLog ${APACHE_LOG_DIR}/mantenimientos_access.log combined
+        </VirtualHost>
+        ```
+
+        Enable the site and reload Apache:
+
+        ```bash
+        sudo a2ensite mantenimientos.conf
+        sudo systemctl reload apache2
+        ```
+      </Tab>
+      <Tab title="Nginx">
+        Create a server block at `/etc/nginx/sites-available/mantenimientos`:
+
+        ```nginx
+        server {
+            listen 80;
+            server_name mantenimientos.local;
+            root /var/www/html/mantenimientos;
+            index index.php;
+
+            location / {
+                try_files $uri $uri/ =404;
+            }
+
+            location ~ \.php$ {
+                include snippets/fastcgi-php.conf;
+                fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+            }
+
+            location ~ /\.ht {
+                deny all;
+            }
+        }
+        ```
+
+        Enable the site and reload Nginx:
+
+        ```bash
+        sudo ln -s /etc/nginx/sites-available/mantenimientos /etc/nginx/sites-enabled/
+        sudo nginx -t
+        sudo systemctl reload nginx
+        ```
+      </Tab>
+      <Tab title="PHP built-in server (development only)">
+        For local development you can use PHP's built-in web server without configuring Apache or Nginx.
+
+        ```bash
+        cd /path/to/mantenimientos
+        php -S localhost:8000
+        ```
+
+        <Warning>
+          The PHP built-in server is single-threaded and not suitable for production use.
+        </Warning>
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Set file permissions">
+    Ensure the web server process can read all project files.
+
+    ```bash
+    sudo chown -R www-data:www-data /var/www/html/mantenimientos
+    sudo find /var/www/html/mantenimientos -type f -exec chmod 644 {} \;
+    sudo find /var/www/html/mantenimientos -type d -exec chmod 755 {} \;
+    ```
+  </Step>
+
+  <Step title="Verify the installation">
+    Open your browser and navigate to your configured URL (e.g., `http://mantenimientos.local` or `http://localhost:8000`). The brands management page should load without errors.
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="'Error en la conexión' appears on every page">
+    This message is output by `config/database.php` when `mysqli_connect()` fails. Check the following:
+
+    - The `$host`, `$user`, `$password`, and `$database` values in `config/database.php` are correct.
+    - The MySQL server is running: `sudo systemctl status mysql`
+    - The user has been granted privileges on the `mantenimientos` database.
+    - The `mysqli` PHP extension is enabled: `php -m | grep mysqli`
+  </Accordion>
+
+  <Accordion title="Blank page or PHP errors">
+    Enable PHP error reporting temporarily by adding these lines to the top of `index.php`:
+
+    ```php
+    <?php
+    ini_set('display_errors', 1);
+    error_reporting(E_ALL);
+    ```
+
+    <Warning>
+      Remove these lines before deploying to production.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="CSS and JavaScript not loading">
+    All CSS and JS assets are loaded from CDNs (TailwindCSS, Bootstrap 4, jQuery). Verify the server has outbound internet access, or download the assets locally and update the `<link>` and `<script>` tags in `layout/header.php`.
+  </Accordion>
+
+  <Accordion title="Table 'mantenimientos.X' doesn't exist">
+    The SQL dump was not imported or was imported into the wrong database. Re-run the import command and verify you are targeting the correct database name.
+
+    ```bash
+    mysql -u root -p mantenimientos < "mantenimientos (1).sql"
+    ```
+  </Accordion>
+
+  <Accordion title="Permission denied errors on Linux">
+    The web server user (`www-data` on Debian/Ubuntu) does not have read access to the project files. Re-apply the permissions from step 6 of the installation guide.
+  </Accordion>
+</AccordionGroup>

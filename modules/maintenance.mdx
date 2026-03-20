@@ -1,0 +1,142 @@
+---
+title: "Maintenance Records (Mantenimientos)"
+description: "Create, track, and close maintenance tasks for equipment in the system."
+---
+
+The maintenance module is where all equipment service tasks are recorded. Each maintenance record captures the type of work, the problem description, the assigned technician, the start date, and — once resolved — the completion date and work description.
+
+**URL:** `/pages/mantenimientos.php`
+
+## Maintenance types
+
+| Value | Label | When to use |
+|---|---|---|
+| `1` | Preventivo | Scheduled, routine maintenance to prevent failures |
+| `2` | Correctivo | Reactive maintenance in response to a problem or failure |
+
+## Maintenance records table
+
+The table is assembled from a multi-table JOIN:
+
+```sql
+SELECT m.id, m.idequipo, m.tipomantenimiento, m.problema,
+       m.fechainicio, m.idmonitor, m.fechafin, m.descripcion,
+       e.codigo, mk.nombremarca, sa.nombresala, se.nombresede, p.nombremonitor
+FROM mantenimientos m
+LEFT OUTER JOIN equipos e ON m.idequipo = e.id
+LEFT OUTER JOIN marcas mk ON e.idmarca = mk.id
+LEFT OUTER JOIN salas sa ON e.idsala = sa.id
+LEFT OUTER JOIN sedes se ON sa.idsede = se.id
+LEFT OUTER JOIN monitores p ON m.idmonitor = p.id
+```
+
+| Column | Description |
+|---|---|
+| ID | Auto-incremented primary key |
+| Código Equipo | Equipment code |
+| Marca | Brand name |
+| Sala | Room name |
+| Sede | Location name |
+| Tipo Mantenimiento | Preventivo or Correctivo |
+| Problema | Problem description |
+| Fecha Inicio | Maintenance start date |
+| Monitor | Assigned technician name |
+| Fecha Fin | Completion date (empty if still open) |
+| Descripción | Work performed description |
+| Acciones | Edit action button |
+
+## Create a maintenance record
+
+<Note>
+  Only equipment with **estado = 1** (Funcionamiento) appears in the equipment dropdown. Equipment already under maintenance is excluded.
+</Note>
+
+<Steps>
+  <Step title="Navigate to the maintenance page">
+    Go to `/pages/mantenimientos.php`.
+  </Step>
+  <Step title="Select the equipment">
+    Choose from the **Equipo** dropdown. Only operational equipment is listed:
+
+    ```sql
+    SELECT * FROM equipos e WHERE e.estado = 1
+    ```
+  </Step>
+  <Step title="Select the maintenance type">
+    Choose `Preventivo` (1) or `Correctivo` (2) from the **Tipo de Mantenimiento** dropdown.
+  </Step>
+  <Step title="Set the start date">
+    Enter the **Fecha de Inicio** for when work begins.
+  </Step>
+  <Step title="Describe the problem">
+    Fill in the **Problema** field with a description of the issue or reason for maintenance.
+  </Step>
+  <Step title="Assign a technician">
+    Select a technician from the **Monitor** dropdown.
+  </Step>
+  <Step title="Submit the form">
+    Click submit. The record is created and the equipment's status automatically changes to `0` (Mantenimiento):
+
+    ```sql
+    UPDATE equipos SET estado = 0 WHERE id = '$idequipo'
+    ```
+  </Step>
+</Steps>
+
+The insert query:
+
+```sql
+INSERT INTO mantenimientos(idequipo, tipomantenimiento, problema, fechainicio, idmonitor)
+VALUES ('$idequipo', '$tipomantenimiento', '$problema', '$fechainicio', '$idmonitor')
+```
+
+## Edit a maintenance record
+
+Click **Editar** on a maintenance record row. The edit form includes all creation fields plus two additional fields available only during editing:
+
+<Tabs>
+  <Tab title="Create form fields">
+    | Field | Description |
+    |---|---|
+    | Equipo | Shown as **disabled text** (not a dropdown) — cannot be changed after creation |
+    | Tipo Mantenimiento | Preventivo or Correctivo |
+    | Problema | Problem description |
+    | Fecha Inicio | Start date |
+    | Monitor | Assigned technician |
+  </Tab>
+  <Tab title="Edit-only fields">
+    | Field | Description |
+    |---|---|
+    | Fecha Fin | Completion date — setting this closes the maintenance record |
+    | Descripción | Detailed description of work performed |
+  </Tab>
+</Tabs>
+
+<Info>
+  The equipment selector is disabled during editing. The system displays the equipment code as a read-only text field instead of the dropdown used during creation.
+</Info>
+
+Edit update query:
+
+```sql
+UPDATE mantenimientos
+SET tipomantenimiento='$tipomantenimiento', problema='$problema',
+    fechainicio='$fechainicio', idmonitor='$idmonitor', descripcion='$descripcion'
+WHERE id='$id'
+```
+
+## Close a maintenance record
+
+To mark maintenance as complete, edit the record and set **Fecha Fin**:
+
+```sql
+UPDATE mantenimientos SET fechafin = '$fechafin' WHERE id = '$id'
+```
+
+When `fechafin` is saved, the equipment's status is automatically restored to operational:
+
+```sql
+UPDATE equipos SET estado = 1 WHERE id = '$idequipo'
+```
+
+After closing, the equipment's **Fecha Siguiente Mantenimiento** in the equipment table is recalculated as `fechafin + 180 days`.

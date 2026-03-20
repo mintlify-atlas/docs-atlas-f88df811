@@ -1,0 +1,76 @@
+---
+title: "Introduction"
+description: "An overview of Sistema de Mantenimientos, a PHP-based equipment maintenance management system."
+---
+
+Sistema de Mantenimientos is a web application for managing the full lifecycle of equipment maintenance in multi-location organizations. It tracks physical assets across locations and rooms, assigns technicians to maintenance jobs, and keeps a complete history of all maintenance activity.
+
+## Who it's for
+
+The system is designed for:
+
+- **IT administrators** who manage computer equipment across multiple sites and need to track maintenance schedules and histories.
+- **Facility managers** responsible for ensuring equipment is serviced on time and faults are recorded.
+
+## Core concepts
+
+<Columns cols={2}>
+  <Card title="Marcas (Brands)" icon="tag">
+    Equipment manufacturers such as Dell, Lenovo, Asus, and Acer. Every piece of equipment must be assigned a brand.
+  </Card>
+  <Card title="Sedes (Locations)" icon="building">
+    Physical sites or campuses where equipment is deployed, such as Bicentenario, Encarnación, or Casa Obando.
+  </Card>
+  <Card title="Salas (Rooms)" icon="door-open">
+    Individual rooms or areas within a location. Each room belongs to exactly one sede.
+  </Card>
+  <Card title="Monitores (Technicians)" icon="user-check">
+    Staff members assigned to carry out maintenance work. In this system the Spanish term "monitor" refers to a technician.
+  </Card>
+  <Card title="Equipos (Equipment)" icon="computer">
+    Individual pieces of hardware. Each equipment record stores its type, brand, room assignment, entry date, and active status.
+  </Card>
+  <Card title="Mantenimientos (Maintenance records)" icon="wrench">
+    Logs of maintenance activity performed on equipment, including the problem description, type of maintenance, assigned technician, start date, end date, and resolution notes.
+  </Card>
+</Columns>
+
+## Relationship hierarchy
+
+Data in the system forms a clear parent-child hierarchy:
+
+```
+Sedes (Locations)
+└── Salas (Rooms)
+    └── Equipos (Equipment)
+        └── Mantenimientos (Maintenance records)
+```
+
+This means:
+
+- A **sede** contains one or more **salas**.
+- A **sala** contains one or more **equipos**.
+- An **equipo** accumulates **mantenimientos** over time.
+- Each **mantenimiento** is carried out by one **monitor** (technician).
+- Each **equipo** belongs to one **marca** (brand).
+
+## Key workflows
+
+<Columns cols={2}>
+  <Card title="Register new equipment" icon="plus-circle" href="/quickstart">
+    Add a brand, create a location and room, then register the equipment item to that room.
+  </Card>
+  <Card title="Log a maintenance job" icon="clipboard-list" href="/architecture/overview">
+    Select the equipment, choose the maintenance type, describe the problem, set the start date, and assign a technician.
+  </Card>
+  <Card title="View maintenance history" icon="history" href="/architecture/database-schema">
+    Browse the complete maintenance log filtered by equipment, date range, or technician.
+  </Card>
+  <Card title="Track upcoming maintenance" icon="calendar" href="/architecture/database-schema">
+    The system highlights equipment whose next scheduled maintenance date (180 days after the last) is approaching.
+  </Card>
+</Columns>
+
+<Info>
+  The system is built with PHP 8.2+, MySQLi, TailwindCSS, and Bootstrap 4. No framework is required — each page is a self-contained PHP file.
+</Info>

@@ -1,0 +1,87 @@
+---
+title: "Schedule a maintenance task"
+description: "Step-by-step guide to creating a maintenance record for a piece of equipment."
+---
+
+This workflow covers creating a new maintenance record and assigning a technician. Only equipment currently in operational status can be scheduled.
+
+<Note>
+  **Preventive vs. Corrective maintenance:**
+  - **Preventivo (1):** Scheduled, routine maintenance performed to prevent failures. Use this when maintenance is planned in advance based on the equipment's maintenance schedule.
+  - **Correctivo (2):** Reactive maintenance performed in response to an existing problem or failure. Use this when equipment has malfunctioned or requires unplanned repair.
+</Note>
+
+<Steps>
+  <Step title="Verify the equipment is operational">
+    Go to `/pages/equipos.php` and confirm the equipment's **Estado** column shows `Funcionamiento`.
+
+    Equipment with `Estado = Mantenimiento` is already under active maintenance and will not appear in the new maintenance dropdown.
+  </Step>
+
+  <Step title="Ensure a technician exists">
+    Go to `/pages/monitores.php` and confirm the technician who will perform the work is listed. If not, add them:
+
+    1. Enter the technician's full name in the **Nombre de Monitor** field.
+    2. Submit the form.
+  </Step>
+
+  <Step title="Navigate to the maintenance page">
+    Go to `/pages/mantenimientos.php`. The creation form appears above the maintenance records table.
+  </Step>
+
+  <Step title="Select the equipment">
+    Choose the equipment from the **Equipo** dropdown. This dropdown only lists equipment where `estado = 1`:
+
+    ```sql
+    SELECT * FROM equipos e WHERE e.estado = 1
+    ```
+
+    If the expected equipment is missing, check its status on the equipment page.
+  </Step>
+
+  <Step title="Select the maintenance type">
+    Choose `Preventivo` or `Correctivo` from the **Tipo de Mantenimiento** dropdown based on the reason for the maintenance.
+  </Step>
+
+  <Step title="Set the start date">
+    Enter the **Fecha de Inicio** — the date the maintenance work begins.
+  </Step>
+
+  <Step title="Describe the problem">
+    Fill in the **Problema** field with a clear description of the issue or the reason for the maintenance visit. For preventive maintenance, a short note such as `Mantenimiento preventivo programado` is sufficient.
+  </Step>
+
+  <Step title="Assign a technician">
+    Select the responsible technician from the **Monitor** dropdown.
+  </Step>
+
+  <Step title="Submit the form">
+    Click submit. Two things happen automatically:
+
+    1. The maintenance record is inserted into the `mantenimientos` table.
+    2. The equipment's status is set to `0` (Mantenimiento):
+
+    ```sql
+    UPDATE equipos SET estado = 0 WHERE id = '$idequipo'
+    ```
+  </Step>
+
+  <Step title="Verify the record">
+    Confirm the new record appears in the maintenance table. The **Fecha Fin** column should be empty, indicating the maintenance is still open.
+
+    On the equipment page, the equipment's **Estado** should now show `Mantenimiento`.
+  </Step>
+</Steps>
+
+## Closing the maintenance record
+
+Once the work is complete, the record must be closed to return the equipment to operational status.
+
+<CardGroup cols={2}>
+  <Card title="Complete a maintenance task" icon="circle-check" href="/workflows/complete-maintenance">
+    Set the completion date and restore equipment status.
+  </Card>
+  <Card title="Maintenance module reference" icon="clipboard" href="/modules/maintenance">
+    Full reference for all maintenance fields and status behavior.
+  </Card>
+</CardGroup>

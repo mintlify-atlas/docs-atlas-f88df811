@@ -1,0 +1,74 @@
+---
+title: "Technicians (Monitores)"
+description: "Manage the technicians who carry out equipment maintenance tasks."
+---
+
+Technicians (monitores) are the people responsible for performing maintenance on equipment. When a maintenance record is created, a technician is assigned to it. The assigned technician's name appears in the maintenance history and reports.
+
+**URL:** `/pages/monitores.php`
+
+## Technicians table
+
+| Column | Description |
+|---|---|
+| ID | Auto-incremented primary key |
+| Nombre | Technician name (nombremonitor) |
+| Acciones | Edit and Delete action buttons |
+
+## Add a technician
+
+<Steps>
+  <Step title="Navigate to the technicians page">
+    Go to `/pages/monitores.php`.
+  </Step>
+  <Step title="Enter the technician name">
+    Fill in the **Nombre de Monitor** field with the technician's full name.
+  </Step>
+  <Step title="Submit the form">
+    Click submit. The technician appears in the table and becomes available in the maintenance assignment dropdown.
+  </Step>
+</Steps>
+
+### Validation rules
+
+- The technician name (`nombremonitor`) is **required**.
+
+## Edit a technician
+
+Click **Editar** to load the technician's name into the form:
+
+```
+GET /pages/monitores.php?id=2&edit=true
+```
+
+Update the name and submit:
+
+```sql
+UPDATE monitores SET nombremonitor = '$nombremonitor' WHERE id = '$id'
+```
+
+## Delete a technician
+
+Click **Eliminar** to remove a technician:
+
+```
+GET /pages/monitores.php?id=2
+```
+
+```sql
+DELETE FROM monitores WHERE id = $id
+```
+
+<Warning>
+  Deleting a technician may fail if maintenance records (`mantenimientos`) reference them through the `idmonitor` foreign key. Reassign or close those maintenance records before deleting the technician.
+</Warning>
+
+## Technicians in maintenance records
+
+When creating or editing a maintenance record at `/pages/mantenimientos.php`, a dropdown lists all registered technicians by name. The selected technician's `id` is stored in the `idmonitor` field of the `mantenimientos` table.
+
+The maintenance list view displays the technician's name via a JOIN:
+
+```sql
+LEFT OUTER JOIN monitores p ON m.idmonitor = p.id
+```

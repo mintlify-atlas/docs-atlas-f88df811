@@ -1,0 +1,149 @@
+---
+title: "Equipment (Equipos)"
+description: "Register and manage all equipment inventory, including status tracking and maintenance scheduling."
+---
+
+Equipment (equipos) is the central entity of the system. Every maintenance record, room assignment, and brand classification links back to an equipment item. The equipment module tracks current operational status and automatically calculates the next scheduled maintenance date.
+
+**URL:** `/pages/equipos.php`
+
+## Equipment table
+
+The table is built from a complex JOIN and aggregate query:
+
+```sql
+SELECT e.id, e.codigo, e.tipo, e.idmarca, e.idsala, e.fechaingreso,
+       e.estado, m.nombremarca, s.nombresala, MAX(ma.fechafin) as fechafin
+FROM equipos e
+LEFT OUTER JOIN marcas m ON e.idmarca = m.id
+LEFT OUTER JOIN salas s ON e.idsala = s.id
+LEFT OUTER JOIN mantenimientos ma ON e.id = ma.idequipo
+GROUP BY e.id
+```
+
+| Column | Description |
+|---|---|
+| ID | Auto-incremented primary key |
+| Código | Unique equipment code |
+| Tipo | Equipment type (Portatil or PC) |
+| Marca | Brand name (from marcas JOIN) |
+| Sala | Room name (from salas JOIN) |
+| Fecha Ingreso | Date the equipment was registered |
+| Fecha Último Mantenimiento | Date the last maintenance was completed (fechafin) |
+| Fecha Siguiente Mantenimiento | Calculated next maintenance date |
+| Estado | Current operational status |
+| Acciones | Edit, Delete, and View history buttons |
+
+## Equipment status
+
+The `estado` field controls whether equipment is available for new maintenance:
+
+| Value | Display label | Meaning |
+|---|---|---|
+| `1` | Funcionamiento | Operational — available for scheduling |
+| `0` | Mantenimiento | Under maintenance — unavailable for new tasks |
+
+<Info>
+  Status changes are automatic. When a new maintenance record is created, the equipment's estado is set to `0`. When a maintenance record is closed (fechafin is set), it returns to `1`.
+</Info>
+
+## Next maintenance date calculation
+
+The next maintenance date is calculated at display time using PHP. The logic is:
+
+- If the equipment has at least one completed maintenance, the date is `fechafin + 180 days`.
+- If the equipment has never been maintained, the date is `fechaingreso + 180 days`.
+
+```php
+$fechault = $row['fechafin'];
+if ($fechault !== NULL) {
+    $fechasigui = new DateTime($fechault);
+    $fechasigui->add(new DateInterval('P180D'));
+    echo $fechasigui->format('Y-m-d');
+} else {
+    $fechasigui = new DateTime($fechaingreso);
+    $fechasigui->add(new DateInterval('P180D'));
+    echo $fechasigui->format('Y-m-d');
+}
+```
+
+## Add equipment
+
+<Steps>
+  <Step title="Ensure prerequisites exist">
+    Before registering equipment you need at least one brand (`/index.php`), one location (`/pages/sedes.php`), and one room (`/pages/salas.php`).
+  </Step>
+  <Step title="Navigate to the equipment page">
+    Go to `/pages/equipos.php`.
+  </Step>
+  <Step title="Enter the equipment code">
+    Fill in **Código** with a unique identifier (e.g., `EQ-2024-001`). The system validates that this code does not already exist.
+  </Step>
+  <Step title="Select the equipment type">
+    Choose from the **Tipo** dropdown: `Portatil` or `PC`.
+  </Step>
+  <Step title="Select the brand">
+    Pick a manufacturer from the **Marca** dropdown.
+  </Step>
+  <Step title="Set the entry date">
+    Enter the **Fecha de Ingreso** (the date the equipment entered service).
+  </Step>
+  <Step title="Select the room">
+    Pick the room where the equipment is physically installed from the **Sala** dropdown.
+  </Step>
+  <Step title="Submit the form">
+    Click submit. The equipment appears in the table with **Estado = Funcionamiento**.
+  </Step>
+</Steps>
+
+### Validation rules
+
+- **Código** is required and must be unique.
+- **Tipo** is required.
+- **Marca** (`idmarca`) is required.
+- **Fecha de Ingreso** (`fechaingreso`) is required.
+- **Sala** (`idsala`) is required.
+
+```sql
+INSERT INTO equipos(codigo, tipo, idmarca, fechaingreso, idsala, estado)
+VALUES ('$codigo', '$tipo', '$idmarca', '$fechaingreso', '$idsala', 1)
+```
+
+## Edit equipment
+
+Click **Editar** on any row:
+
+```
+GET /pages/equipos.php?id=10&edit=true
+```
+
+All fields are editable. Submit to apply:
+
+```sql
+UPDATE equipos
+SET codigo='$codigo', tipo='$tipo', idmarca='$idmarca',
+    fechaingreso='$fechaingreso', idsala='$idsala', estado='$estado'
+WHERE id='$id'
+```
+
+## Delete equipment
+
+Click **Eliminar** to remove an equipment record:
+
+```
+GET /pages/equipos.php?id=10
+```
+
+<Warning>
+  Deleting equipment will fail if maintenance records reference it. Close all maintenance records for the equipment before deleting.
+</Warning>
+
+## View maintenance history
+
+Click the **Ver** button on any equipment row to open the maintenance history page:
+
+```
+/pages/ver-mantenimientos.php?id=10
+```
+
+This page shows all maintenance records associated with the selected equipment, including brand, room, and completion dates.

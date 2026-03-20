@@ -1,0 +1,92 @@
+---
+title: "Register new equipment"
+description: "Step-by-step guide to adding a new piece of equipment to the inventory."
+---
+
+This workflow walks through registering a new equipment item from scratch, including setting up all required related records first.
+
+<Steps>
+  <Step title="Ensure a brand exists">
+    Navigate to `/index.php` and confirm the manufacturer is listed. If not, add it:
+
+    1. Enter the brand name in the **Nombre de Marca** field.
+    2. Submit the form.
+
+    Common manufacturers: Dell, Lenovo, Asus, Acer.
+  </Step>
+
+  <Step title="Ensure a location (sede) exists">
+    Navigate to `/pages/sedes.php`. If the physical facility where the equipment will be located is not listed, add it:
+
+    1. Enter the facility name in the **Nombre de Sede** field.
+    2. Submit the form.
+  </Step>
+
+  <Step title="Ensure a room (sala) exists">
+    Navigate to `/pages/salas.php`. If the room within that facility is not listed, add it:
+
+    1. Enter the room name in the **Nombre de Sala** field.
+    2. Select the parent location from the **Sede** dropdown.
+    3. Submit the form.
+
+    <Tip>
+      Room names like `Sala de Cómputo 1` or `Laboratorio A` make it easier to identify equipment locations at a glance.
+    </Tip>
+  </Step>
+
+  <Step title="Navigate to the equipment page">
+    Go to `/pages/equipos.php`. The form appears above the equipment table.
+  </Step>
+
+  <Step title="Enter the equipment code">
+    Fill in the **Código** field with a unique identifier for this equipment item.
+
+    <Tip>
+      Use a consistent naming convention for equipment codes to make searching and auditing easier. A pattern like `[TYPE]-[YEAR]-[SEQUENCE]` works well (e.g., `PC-2024-001`, `LAP-2024-042`). Codes must be unique — the system will reject duplicates.
+    </Tip>
+  </Step>
+
+  <Step title="Select the equipment type">
+    Choose from the **Tipo** dropdown:
+
+    - `Portatil` — for laptops and portable devices
+    - `PC` — for desktop computers
+  </Step>
+
+  <Step title="Select the brand">
+    Choose the manufacturer from the **Marca** dropdown. This list is populated from the brands registered in step 1.
+  </Step>
+
+  <Step title="Set the entry date">
+    Enter the **Fecha de Ingreso** — the date the equipment was put into service. This date is also used to calculate the first scheduled maintenance date (entry date + 180 days).
+  </Step>
+
+  <Step title="Select the room">
+    Choose the physical room from the **Sala** dropdown. This list is populated from the rooms registered in step 3.
+  </Step>
+
+  <Step title="Submit the form">
+    Click submit. The equipment is created with **Estado = Funcionamiento** (operational, `estado = 1`).
+  </Step>
+
+  <Step title="Verify the entry">
+    Confirm the new equipment row appears in the table. Check that:
+
+    - The **Estado** column shows `Funcionamiento`.
+    - The **Fecha Siguiente Mantenimiento** column shows `fechaingreso + 180 days`.
+    - The correct brand, room, and type are displayed.
+  </Step>
+</Steps>
+
+## What happens next
+
+Once registered, the equipment is immediately available for maintenance scheduling. When the next maintenance date approaches, create a maintenance record at `/pages/mantenimientos.php`.
+
+<CardGroup cols={2}>
+  <Card title="Schedule a maintenance task" icon="wrench" href="/workflows/schedule-maintenance">
+    Create a maintenance record for this equipment.
+  </Card>
+  <Card title="Equipment module reference" icon="computer" href="/modules/equipment">
+    Full reference for all equipment fields and status values.
+  </Card>
+</CardGroup>

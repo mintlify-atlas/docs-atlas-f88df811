@@ -1,0 +1,237 @@
+---
+title: "Configuration reference"
+description: "All configuration options for the Sistema de Mantenimientos application, including database credentials, web server setup, and frontend dependencies."
+---
+
+## Database configuration
+
+The database connection is defined in `config/database.php`. The file establishes a MySQLi connection using four variables.
+
+```php config/database.php
+<?php
+
+$host = 'localhost';
+$user = 'root';
+$password = "";
+$database = 'mantenimientos';
+
+$dbConnection = mysqli_connect($host, $user, $password, $database);
+
+if (!$dbConnection) {
+    echo 'Error en la conexión';
+}
+```
+
+### Variables
+
+<ParamField path="$host" type="string" default="localhost">
+  Hostname or IP address of the MySQL/MariaDB server. Use `localhost` when the database runs on the same machine as the web server.
+</ParamField>
+
+<ParamField path="$user" type="string" default="root">
+  MySQL username used to authenticate the connection.
+</ParamField>
+
+<ParamField path="$password" type="string" default="">
+  MySQL password for the specified user. The default is an empty string, which is typical for local development with XAMPP or WAMP.
+</ParamField>
+
+<ParamField path="$database" type="string" default="mantenimientos">
+  Name of the database to select after connecting. Must match the database created during setup.
+</ParamField>
+
+---
+
+## Environment considerations
+
+<Tabs>
+
+<Tab title="Development">
+
+Using `root` with an empty password is acceptable in a local development environment (e.g. XAMPP, WAMP, Laravel Herd). No additional configuration is needed.
+
+```php config/database.php
+$host = 'localhost';
+$user = 'root';
+$password = "";
+$database = 'mantenimientos';
+```
+
+</Tab>
+
+<Tab title="Production">
+
+Create a dedicated MySQL user with only the privileges the application requires. Do not use the `root` account in production.
+
+```sql
+CREATE USER 'mantenimientos_user'@'localhost' IDENTIFIED BY 'strong_password_here';
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON mantenimientos.*
+  TO 'mantenimientos_user'@'localhost';
+
+FLUSH PRIVILEGES;
+```
+
+Then update `config/database.php`:
+
+```php config/database.php
+$host = 'localhost';
+$user = 'mantenimientos_user';
+$password = 'strong_password_here';
+$database = 'mantenimientos';
+```
+
+<Warning>
+  Never commit real credentials to version control. Consider loading them from environment variables or a `.env` file that is excluded from the repository.
+</Warning>
+
+</Tab>
+
+</Tabs>
+
+---
+
+## Web server configuration
+
+### PHP requirements
+
+| Requirement | Minimum version |
+|-------------|----------------|
+| PHP | 8.2 |
+| MySQLi extension | Bundled with PHP 8.2 |
+
+Verify the `mysqli` extension is enabled in `php.ini`:
+
+```ini
+extension=mysqli
+```
+
+### Apache
+
+<Tabs>
+
+<Tab title="Virtual host">
+
+```apache
+<VirtualHost *:80>
+    ServerName mantenimientos.local
+    DocumentRoot /var/www/html/mantenimientos
+
+    <Directory /var/www/html/mantenimientos>
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    ErrorLog ${APACHE_LOG_DIR}/mantenimientos_error.log
+    CustomLog ${APACHE_LOG_DIR}/mantenimientos_access.log combined
+</VirtualHost>
+```
+
+</Tab>
+
+<Tab title=".htaccess">
+
+Place an `.htaccess` file in the project root to enable clean URLs and restrict direct access to config files:
+
+```apache
+Options -Indexes
+
+# Deny direct access to config directory
+<FilesMatch "^config/">
+    Require all denied
+</FilesMatch>
+
+# Route all requests through index.php
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]
+```
+
+</Tab>
+
+</Tabs>
+
+### Nginx
+
+```nginx
+server {
+    listen 80;
+    server_name mantenimientos.local;
+    root /var/www/html/mantenimientos;
+    index index.php;
+
+    # Deny access to config directory
+    location ~ ^/config/ {
+        deny all;
+        return 404;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    location ~ /\.ht {
+        deny all;
+    }
+}
+```
+
+---
+
+## Frontend CDN dependencies
+
+The `layout/header.php` file loads the following libraries from public CDNs on every page:
+
+| Library | Version | Purpose |
+|---------|---------|--------|
+| Tailwind CSS | latest | Utility-first CSS framework |
+| Bootstrap CSS | 4.3.1 | Component library and grid |
+| Bootstrap JS | 4.3.1 | Bootstrap interactive components |
+| jQuery | 3.3.1 | DOM manipulation, required by Bootstrap JS |
+| Popper.js | 1.14.7 | Positioning engine, required by Bootstrap JS |
+
+```html layout/header.php (CDN links)
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Bootstrap 4.3.1 CSS -->
+<link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css"
+  integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T"
+  crossorigin="anonymous"
+/>
+
+<!-- jQuery 3.3.1 -->
+<script
+  src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+  integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+  crossorigin="anonymous"
+></script>
+
+<!-- Popper.js 1.14.7 -->
+<script
+  src="https://cdn.jsdelivr.net/npm/popper.js@1.14.7/dist/umd/popper.min.js"
+  integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+  crossorigin="anonymous"
+></script>
+
+<!-- Bootstrap 4.3.1 JS -->
+<script
+  src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js"
+  integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+  crossorigin="anonymous"
+></script>
+```
+
+<Tip>
+  In production, download and serve these assets from your own server rather than relying on public CDNs. This improves availability, removes the dependency on third-party uptime, and gives you control over the exact version loaded. Place them in a `public/assets/` directory and update the `<script>` and `<link>` tags in `layout/header.php` accordingly.
+</Tip>

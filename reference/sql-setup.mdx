@@ -1,0 +1,266 @@
+---
+title: "Database setup"
+description: "Step-by-step instructions for creating and importing the mantenimientos database from the SQL dump."
+---
+
+This page covers how to create the `mantenimientos` database, import the schema and seed data, and verify the setup.
+
+<Note>
+  The application was developed against **MariaDB 10.1.38**. It is fully compatible with MySQL 5.7+ and MariaDB 10.1+. All SQL dialect features used are standard and portable between the two engines.
+</Note>
+
+## Prerequisites
+
+- MySQL or MariaDB server installed and running
+- Access to a user with `CREATE DATABASE` and `GRANT` privileges (typically `root` in development)
+- The file `mantenimientos (1).sql` from the project root
+
+---
+
+## Create and import the database
+
+<Steps>
+
+<Step title="Create the database">
+
+Log in to MySQL and create the database with UTF-8 encoding:
+
+```sql
+CREATE DATABASE mantenimientos
+  CHARACTER SET utf8
+  COLLATE utf8_general_ci;
+```
+
+Verify it was created:
+
+```sql
+SHOW DATABASES LIKE 'mantenimientos';
+```
+
+</Step>
+
+<Step title="Import the SQL dump">
+
+Run the import from your terminal. The filename contains a space, so quote it.
+
+<CodeGroup>
+
+```bash Linux / macOS
+mysql -u root -p mantenimientos < "mantenimientos (1).sql"
+```
+
+```powershell Windows (PowerShell)
+mysql -u root -p mantenimientos < 'mantenimientos (1).sql'
+```
+
+```cmd Windows (Command Prompt)
+mysql -u root -p mantenimientos < "mantenimientos (1).sql"
+```
+
+</CodeGroup>
+
+You will be prompted for the MySQL root password. Leave it blank and press Enter if you have no password set (default development setup).
+
+</Step>
+
+<Step title="Verify tables were created">
+
+Connect to the database and list tables:
+
+```sql
+USE mantenimientos;
+SHOW TABLES;
+```
+
+Expected output:
+
+```
++-------------------------+
+| Tables_in_mantenimientos |
++-------------------------+
+| equipos                 |
+| mantenimientos          |
+| marcas                  |
+| monitores               |
+| salas                   |
+| sedes                   |
++-------------------------+
+6 rows in set
+```
+
+Verify the seed data loaded correctly:
+
+```sql
+SELECT * FROM marcas;
+SELECT * FROM sedes;
+SELECT * FROM salas;
+```
+
+</Step>
+
+<Step title="Grant user permissions (production)">
+
+For any environment that is not local development, create a dedicated database user instead of using `root`:
+
+```sql
+CREATE USER 'mantenimientos_user'@'localhost' IDENTIFIED BY 'strong_password_here';
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON mantenimientos.* 
+  TO 'mantenimientos_user'@'localhost';
+
+FLUSH PRIVILEGES;
+```
+
+Then update `config/database.php` to use the new credentials:
+
+```php
+$user = 'mantenimientos_user';
+$password = 'strong_password_here';
+```
+
+</Step>
+
+</Steps>
+
+---
+
+## Complete SQL dump
+
+The full schema and seed data, organized by section.
+
+### Table definitions
+
+```sql
+-- Table: sedes
+CREATE TABLE `sedes` (
+  `id` int(11) NOT NULL,
+  `nombresede` varchar(100) CHARACTER SET latin1 NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- Table: salas
+CREATE TABLE `salas` (
+  `id` int(11) NOT NULL,
+  `nombresala` varchar(100) NOT NULL,
+  `idsede` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-- Table: marcas
+CREATE TABLE `marcas` (
+  `id` int(11) NOT NULL,
+  `nombremarca` varchar(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-- Table: monitores
+CREATE TABLE `monitores` (
+  `id` int(11) NOT NULL,
+  `nombremonitor` varchar(100) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-- Table: equipos
+CREATE TABLE `equipos` (
+  `id` int(11) NOT NULL,
+  `tipo` varchar(100) NOT NULL,
+  `idmarca` int(11) NOT NULL,
+  `codigo` varchar(100) NOT NULL,
+  `idsala` int(11) NOT NULL,
+  `fechaingreso` date NOT NULL,
+  `estado` int(11) NOT NULL DEFAULT '1'
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+-- Table: mantenimientos
+CREATE TABLE `mantenimientos` (
+  `id` int(11) NOT NULL,
+  `idequipo` int(11) NOT NULL,
+  `tipomantenimiento` int(11) NOT NULL,
+  `problema` varchar(100) NOT NULL,
+  `fechainicio` date NOT NULL,
+  `idmonitor` int(11) NOT NULL,
+  `fechafin` date DEFAULT NULL,
+  `descripcion` text
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+```
+
+### Seed data
+
+```sql
+INSERT INTO `marcas` (`id`, `nombremarca`) VALUES
+(1, 'Dell'),
+(3, 'Lenovo'),
+(4, 'asus'),
+(5, 'acer');
+
+INSERT INTO `sedes` (`id`, `nombresede`) VALUES
+(1, 'Bicentenario'),
+(2, 'Encarnación'),
+(3, 'Casa Obando');
+
+INSERT INTO `salas` (`id`, `nombresala`, `idsede`) VALUES
+(1, 'Sala1', 1),
+(4, 'sala 3', 3),
+(5, 'Sala Ñueva', 2);
+```
+
+### Primary keys and indexes
+
+```sql
+ALTER TABLE `equipos`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `fkequiposala` (`idsala`),
+  ADD KEY `fkequipomarca` (`idmarca`);
+
+ALTER TABLE `mantenimientos`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `fkmantenimientoequipo` (`idequipo`),
+  ADD KEY `fkmantenimientomonitor` (`idmonitor`);
+
+ALTER TABLE `marcas` ADD PRIMARY KEY (`id`);
+ALTER TABLE `monitores` ADD PRIMARY KEY (`id`);
+
+ALTER TABLE `salas`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `fksalasede` (`idsede`);
+
+ALTER TABLE `sedes` ADD PRIMARY KEY (`id`);
+```
+
+### AUTO_INCREMENT
+
+```sql
+ALTER TABLE `equipos`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `mantenimientos`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `marcas`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+ALTER TABLE `monitores`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `salas`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+ALTER TABLE `sedes`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+```
+
+### Foreign key constraints
+
+```sql
+ALTER TABLE `equipos`
+  ADD CONSTRAINT `fkequipomarca`
+    FOREIGN KEY (`idmarca`) REFERENCES `marcas` (`id`),
+  ADD CONSTRAINT `fkequiposala`
+    FOREIGN KEY (`idsala`) REFERENCES `salas` (`id`);
+
+ALTER TABLE `mantenimientos`
+  ADD CONSTRAINT `fkmantenimientoequipo`
+    FOREIGN KEY (`idequipo`) REFERENCES `equipos` (`id`),
+  ADD CONSTRAINT `fkmantenimientomonitor`
+    FOREIGN KEY (`idmonitor`) REFERENCES `monitores` (`id`);
+
+ALTER TABLE `salas`
+  ADD CONSTRAINT `fksalasede`
+    FOREIGN KEY (`idsede`) REFERENCES `sedes` (`id`);
+```

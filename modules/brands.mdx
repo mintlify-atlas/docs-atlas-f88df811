@@ -1,0 +1,77 @@
+---
+title: "Brands (Marcas)"
+description: "Manage equipment manufacturer brands used to classify equipment in the system."
+---
+
+Brands (marcas) represent the equipment manufacturers registered in the system. Each piece of equipment must be associated with a brand. Common examples from the seed data include Dell, Lenovo, Asus, and Acer.
+
+**URL:** `/index.php`
+
+## Brands table
+
+The brands list displays all registered manufacturers:
+
+| Column | Description |
+|---|---|
+| ID | Auto-incremented primary key |
+| Nombre | Brand name (nombremarca) |
+| Acciones | Edit and Delete action buttons |
+
+## Add a brand
+
+<Steps>
+  <Step title="Open the brands page">
+    Navigate to `/index.php`. The form and table are on the same page.
+  </Step>
+  <Step title="Enter the brand name">
+    Fill in the **Nombre de Marca** field with the manufacturer name (e.g., `Dell`).
+  </Step>
+  <Step title="Submit the form">
+    Click the submit button. The page reloads and the new brand appears in the table.
+  </Step>
+</Steps>
+
+### Validation rules
+
+- The brand name field (`nombremarca`) is **required**. Submitting an empty name shows the error: *"El Nombre de Marca Es Requerido"*.
+- Duplicate names are blocked. The system performs a **case-insensitive** check using `LOWER()` before inserting:
+
+```sql
+SELECT * FROM marcas m WHERE m.nombremarca = LOWER('$nombremarca')
+```
+
+If a match is found, the error *"Ya se encuentra registrado el nombre de marca"* is shown and no record is created.
+
+## Edit a brand
+
+To edit an existing brand, click the **Editar** button in the Acciones column. This sends a `GET` request with `?id=X&edit=true`, which loads the brand's current name into the form:
+
+```
+GET /index.php?id=5&edit=true
+```
+
+Update the name and submit. The system runs an `UPDATE` query:
+
+```sql
+UPDATE marcas SET nombremarca = '$nombremarca' WHERE id = '$id'
+```
+
+## Delete a brand
+
+To delete a brand, click the **Eliminar** button. This sends a `GET` request with only `?id=X` (no `edit` parameter):
+
+```
+GET /index.php?id=5
+```
+
+The system executes:
+
+```sql
+DELETE FROM marcas WHERE id = $id
+```
+
+On success the page redirects to `/index.php`.
+
+<Warning>
+  Deleting a brand will fail at the database level if any equipment (`equipos`) records reference it through the `idmarca` foreign key. Remove or reassign all associated equipment before deleting a brand.
+</Warning>

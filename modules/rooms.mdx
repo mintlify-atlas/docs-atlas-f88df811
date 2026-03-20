@@ -1,0 +1,80 @@
+---
+title: "Rooms (Salas)"
+description: "Manage rooms within locations where equipment is physically installed."
+---
+
+Rooms (salas) are the spaces within a location (sede) where equipment is physically located. Every piece of equipment must be assigned to a room, which in turn belongs to a sede.
+
+**URL:** `/pages/salas.php`
+
+## Rooms table
+
+The table is populated with a JOIN query that fetches both the room name and the parent location name:
+
+```sql
+SELECT s.id AS id, s.nombresala, s.idsede, ss.nombresede
+FROM salas s
+LEFT OUTER JOIN sedes ss ON s.idsede = ss.id
+```
+
+| Column | Description |
+|---|---|
+| ID | Auto-incremented primary key |
+| Nombre | Room name (nombresala) |
+| Sede | Parent location name (from sedes JOIN) |
+| Acciones | Edit and Delete action buttons |
+
+## Add a room
+
+<Steps>
+  <Step title="Ensure the parent location exists">
+    A room must belong to a sede. If none exist yet, create one at `/pages/sedes.php` first.
+  </Step>
+  <Step title="Navigate to the rooms page">
+    Go to `/pages/salas.php`.
+  </Step>
+  <Step title="Fill in the room name">
+    Enter a value in the **Nombre de Sala** field (e.g., `Sala de Cómputo 1`).
+  </Step>
+  <Step title="Select the parent location">
+    Choose a sede from the **Sede** dropdown. This sets the `idsede` foreign key.
+  </Step>
+  <Step title="Submit the form">
+    Click submit. The new room appears in the table with its parent location name.
+  </Step>
+</Steps>
+
+### Validation rules
+
+- **Nombre de Sala** (`nombresala`) is required.
+- **Sede** (`idsede`) is required — a room cannot exist without a parent location.
+
+## Edit a room
+
+Click **Editar** to load the room into the form:
+
+```
+GET /pages/salas.php?id=7&edit=true
+```
+
+Update either the name or the parent location and submit:
+
+```sql
+UPDATE salas SET nombresala = '$nombresala', idsede = '$idsede' WHERE id = '$id'
+```
+
+## Delete a room
+
+Click **Eliminar** to remove a room:
+
+```
+GET /pages/salas.php?id=7
+```
+
+```sql
+DELETE FROM salas WHERE id = $id
+```
+
+<Warning>
+  A room cannot be deleted if equipment (`equipos`) records reference it through `idsala`. Remove or reassign all equipment in the room before deleting it.
+</Warning>

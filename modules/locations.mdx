@@ -1,0 +1,83 @@
+---
+title: "Locations (Sedes)"
+description: "Manage physical facilities and campuses that contain rooms and equipment."
+---
+
+Locations (sedes) represent the physical facilities or campuses where equipment is housed. Each room (sala) belongs to a sede, and each piece of equipment belongs to a room. Examples from the seed data: Bicentenario, Encarnación, Casa Obando.
+
+**URL:** `/pages/sedes.php`
+
+## Locations table
+
+| Column | Description |
+|---|---|
+| ID | Auto-incremented primary key |
+| Nombre | Location name (nombresede) |
+| Acciones | Edit and Delete action buttons |
+
+## Add a location
+
+<Steps>
+  <Step title="Navigate to the locations page">
+    Go to `/pages/sedes.php`.
+  </Step>
+  <Step title="Enter the location name">
+    Fill in the **Nombre de Sede** field with the facility name (e.g., `Bicentenario`).
+  </Step>
+  <Step title="Submit the form">
+    Click the submit button. The new sede appears in the table immediately.
+  </Step>
+</Steps>
+
+### Validation rules
+
+- The location name (`nombresede`) is **required**.
+- Duplicate names are blocked via a case-insensitive check:
+
+```sql
+SELECT * FROM sedes m WHERE m.nombresede = LOWER('$nombresede')
+```
+
+## Edit a location
+
+Click **Editar** on any row to load the sede into the form:
+
+```
+GET /pages/sedes.php?id=3&edit=true
+```
+
+Modify the name and submit. The system runs:
+
+```sql
+UPDATE sedes SET nombresede = '$nombresede' WHERE id = '$id'
+```
+
+## Delete a location
+
+Click **Eliminar** on any row:
+
+```
+GET /pages/sedes.php?id=3
+```
+
+The system executes:
+
+```sql
+DELETE FROM sedes WHERE id = $id
+```
+
+<Warning>
+  A sede cannot be deleted while rooms (salas) referencing it exist. Delete or reassign all rooms belonging to this location first.
+</Warning>
+
+## Relationship to rooms
+
+Sedes are the top level of the physical hierarchy:
+
+```
+Sede (location)
+└── Sala (room)
+    └── Equipo (equipment)
+```
+
+Each room stores the `idsede` foreign key pointing back to its parent location. The rooms module uses a dropdown populated from this table when creating or editing a room.

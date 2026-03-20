@@ -1,0 +1,257 @@
+---
+title: "Database schema"
+description: "Table definitions, column types, foreign key relationships, and example data for the mantenimientos database."
+---
+
+## Entity relationship overview
+
+```mermaid
+erDiagram
+    marcas ||--o{ equipos : "has"
+    sedes ||--o{ salas : "contains"
+    salas ||--o{ equipos : "holds"
+    equipos ||--o{ mantenimientos : "receives"
+    monitores ||--o{ mantenimientos : "performs"
+
+    marcas {
+        int id PK
+        varchar nombremarca
+    }
+    sedes {
+        int id PK
+        varchar nombresede
+    }
+    salas {
+        int id PK
+        varchar nombresala
+        int idsede FK
+    }
+    monitores {
+        int id PK
+        varchar nombremonitor
+    }
+    equipos {
+        int id PK
+        varchar tipo
+        int idmarca FK
+        varchar codigo
+        int idsala FK
+        date fechaingreso
+        int estado
+    }
+    mantenimientos {
+        int id PK
+        int idequipo FK
+        int tipomantenimiento
+        varchar problema
+        date fechainicio
+        int idmonitor FK
+        date fechafin
+        text descripcion
+    }
+```
+
+## Tables
+
+### marcas
+
+Stores equipment brands (manufacturers).
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | `int(11)` | `NOT NULL AUTO_INCREMENT PRIMARY KEY` | Unique brand identifier |
+| `nombremarca` | `varchar(100)` | `NOT NULL` | Brand name (e.g., Dell, Lenovo) |
+
+**Example data:**
+
+| id | nombremarca |
+|----|-------------|
+| 1 | Dell |
+| 2 | Lenovo |
+| 3 | Asus |
+| 4 | Acer |
+
+---
+
+### sedes
+
+Stores physical locations or campuses.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | `int(11)` | `NOT NULL AUTO_INCREMENT PRIMARY KEY` | Unique location identifier |
+| `nombresede` | `varchar(100)` | `NOT NULL` | Location name |
+
+**Example data:**
+
+| id | nombresede |
+|----|------------|
+| 1 | Bicentenario |
+| 2 | Encarnación |
+| 3 | Casa Obando |
+
+---
+
+### salas
+
+Stores rooms or areas within a sede.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | `int(11)` | `NOT NULL AUTO_INCREMENT PRIMARY KEY` | Unique room identifier |
+| `nombresala` | `varchar(100)` | `NOT NULL` | Room name |
+| `idsede` | `int(11)` | `NOT NULL FOREIGN KEY → sedes.id` | The location this room belongs to |
+
+<Note>
+  Deleting a sede that still has associated salas will fail due to the foreign key constraint. Remove all salas first, or set `ON DELETE CASCADE` in the schema if automatic deletion is preferred.
+</Note>
+
+---
+
+### monitores
+
+Stores technician records.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | `int(11)` | `NOT NULL AUTO_INCREMENT PRIMARY KEY` | Unique technician identifier |
+| `nombremonitor` | `varchar(100)` | `NOT NULL` | Full name of the technician |
+
+<Info>
+  "Monitor" in this context means a maintenance technician, not a display device.
+</Info>
+
+---
+
+### equipos
+
+Stores individual equipment items.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | `int(11)` | `NOT NULL AUTO_INCREMENT PRIMARY KEY` | Unique equipment identifier |
+| `tipo` | `varchar(100)` | `NOT NULL` | Equipment type (e.g., Laptop, Desktop, Printer) |
+| `idmarca` | `int(11)` | `NOT NULL FOREIGN KEY → marcas.id` | The brand of this equipment |
+| `codigo` | `varchar(100)` | `NOT NULL` | Asset code or serial number |
+| `idsala` | `int(11)` | `NOT NULL FOREIGN KEY → salas.id` | The room where the equipment is located |
+| `fechaingreso` | `date` | `NOT NULL` | Date the equipment was registered in the system |
+| `estado` | `int(11)` | `NOT NULL DEFAULT 1` | Active status: `1` = active, `0` = inactive |
+
+---
+
+### mantenimientos
+
+Stores maintenance job records.
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| `id` | `int(11)` | `NOT NULL AUTO_INCREMENT PRIMARY KEY` | Unique maintenance record identifier |
+| `idequipo` | `int(11)` | `NOT NULL FOREIGN KEY → equipos.id` | The equipment this job was performed on |
+| `tipomantenimiento` | `int(11)` | `NOT NULL` | Maintenance type: `1` = Preventive, `2` = Corrective |
+| `problema` | `varchar(100)` | `NOT NULL` | Short description of the problem or task |
+| `fechainicio` | `date` | `NOT NULL` | Date the maintenance job started |
+| `idmonitor` | `int(11)` | `NOT NULL FOREIGN KEY → monitores.id` | The technician assigned to this job |
+| `fechafin` | `date` | `DEFAULT NULL` | Date the job was completed (null if still in progress) |
+| `descripcion` | `text` | `DEFAULT NULL` | Detailed notes or resolution description |
+
+<Tip>
+  A `fechafin` of `NULL` indicates the maintenance job is still open. Use this to identify equipment currently under repair.
+</Tip>
+
+## Foreign key relationships
+
+| Foreign key | References | Description |
+|-------------|------------|-------------|
+| `equipos.idmarca` | `marcas.id` | Each equipment item has one brand |
+| `equipos.idsala` | `salas.id` | Each equipment item is located in one room |
+| `salas.idsede` | `sedes.id` | Each room belongs to one location |
+| `mantenimientos.idequipo` | `equipos.id` | Each maintenance record belongs to one equipment item |
+| `mantenimientos.idmonitor` | `monitores.id` | Each maintenance job is assigned to one technician |
+
+## 180-day maintenance interval
+
+The equipment page (`pages/equipos.php`) calculates the next scheduled maintenance date for each equipment item. The logic is:
+
+1. Find the most recent `fechainicio` from the `mantenimientos` table for that equipment item.
+2. Add 180 days to that date to get the next scheduled maintenance date.
+3. If the next date has already passed, the equipment is flagged as overdue.
+
+Example SQL to retrieve equipment with their next maintenance dates:
+
+```sql
+SELECT
+    e.id,
+    e.codigo,
+    e.tipo,
+    m.nombremarca,
+    MAX(mn.fechainicio) AS ultimo_mantenimiento,
+    DATE_ADD(MAX(mn.fechainicio), INTERVAL 180 DAY) AS proximo_mantenimiento
+FROM equipos e
+JOIN marcas m ON e.idmarca = m.id
+LEFT JOIN mantenimientos mn ON mn.idequipo = e.id
+WHERE e.estado = 1
+GROUP BY e.id, e.codigo, e.tipo, m.nombremarca;
+```
+
+Equipment that has never had a maintenance job will return `NULL` for `ultimo_mantenimiento`, meaning it should be serviced immediately.
+
+<Warning>
+  Equipment with no maintenance history (`ultimo_mantenimiento IS NULL`) should be treated as overdue. The application logic in `equipos.php` handles this case by flagging the row visually in the equipment table.
+</Warning>
+
+## Full schema DDL
+
+```sql
+CREATE TABLE `marcas` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `nombremarca` varchar(100) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `sedes` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `nombresede` varchar(100) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `salas` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `nombresala` varchar(100) NOT NULL,
+  `idsede` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `fk_salas_sedes` FOREIGN KEY (`idsede`) REFERENCES `sedes` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `monitores` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `nombremonitor` varchar(100) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `equipos` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `tipo` varchar(100) NOT NULL,
+  `idmarca` int(11) NOT NULL,
+  `codigo` varchar(100) NOT NULL,
+  `idsala` int(11) NOT NULL,
+  `fechaingreso` date NOT NULL,
+  `estado` int(11) NOT NULL DEFAULT '1',
+  PRIMARY KEY (`id`),
+  CONSTRAINT `fk_equipos_marcas` FOREIGN KEY (`idmarca`) REFERENCES `marcas` (`id`),
+  CONSTRAINT `fk_equipos_salas` FOREIGN KEY (`idsala`) REFERENCES `salas` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `mantenimientos` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `idequipo` int(11) NOT NULL,
+  `tipomantenimiento` int(11) NOT NULL,
+  `problema` varchar(100) NOT NULL,
+  `fechainicio` date NOT NULL,
+  `idmonitor` int(11) NOT NULL,
+  `fechafin` date DEFAULT NULL,
+  `descripcion` text,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `fk_mantenimientos_equipos` FOREIGN KEY (`idequipo`) REFERENCES `equipos` (`id`),
+  CONSTRAINT `fk_mantenimientos_monitores` FOREIGN KEY (`idmonitor`) REFERENCES `monitores` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+```

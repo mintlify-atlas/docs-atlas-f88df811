@@ -1,97 +1,70 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "Sistema de Mantenimientos"
+description: "A web application for managing equipment maintenance, tracking devices, rooms, locations, and technicians across multiple facilities."
 ---
 
-## Setting up
-
-Get your documentation site up and running in minutes.
-
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get the system running on your server in minutes.
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Installation Guide" icon="wrench" href="/installation">
+    Full setup instructions for PHP, MySQL, and Apache/Nginx.
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="User Guide" icon="book-open" href="/modules/equipment">
+    Learn how to manage equipment, maintenance records, and more.
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Database Reference" icon="database" href="/reference/database-tables">
+    Explore the full database schema and table relationships.
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## What is Sistema de Mantenimientos?
 
-Everything you need to create world-class documentation.
+Sistema de Mantenimientos is a PHP-based web application designed to help organizations track and manage equipment maintenance across multiple facilities. It provides a centralized interface for registering devices, scheduling preventive and corrective maintenance, assigning technicians, and monitoring equipment health over time.
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+## Key features
 
-## Need inspiration?
+<CardGroup cols={2}>
+  <Card title="Equipment registry" icon="computer">
+    Register computers and peripherals with brand, type, entry date, and room assignment. Track whether each device is operational or under maintenance.
+  </Card>
+  <Card title="Maintenance scheduling" icon="calendar">
+    Schedule preventive and corrective maintenance tasks. The system automatically calculates the next maintenance date based on a 180-day interval.
+  </Card>
+  <Card title="Multi-location support" icon="building">
+    Organize equipment across multiple sedes (locations) and salas (rooms). Each room belongs to a specific sede, enabling hierarchical tracking.
+  </Card>
+  <Card title="Technician management" icon="user-gear">
+    Register monitores (technicians) and assign them to specific maintenance tasks. Track who performed each maintenance job.
+  </Card>
+  <Card title="Maintenance history" icon="clock-rotate-left">
+    View the full maintenance history for any individual piece of equipment, including start dates, end dates, and work descriptions.
+  </Card>
+  <Card title="Status tracking" icon="circle-check">
+    Equipment status automatically updates when maintenance begins (set to "in maintenance") and when maintenance is completed (set to "operational").
+  </Card>
+</CardGroup>
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+## System modules
+
+The application is organized into six core management modules:
+
+| Module | URL | Description |
+|--------|-----|-------------|
+| Brands (Marcas) | `/index.php` | Manage equipment brands |
+| Locations (Sedes) | `/pages/sedes.php` | Manage facility locations |
+| Rooms (Salas) | `/pages/salas.php` | Manage rooms within locations |
+| Technicians (Monitores) | `/pages/monitores.php` | Manage maintenance technicians |
+| Equipment (Equipos) | `/pages/equipos.php` | Manage devices and computers |
+| Maintenance | `/pages/mantenimientos.php` | Create and track maintenance records |
+
+## Technology stack
+
+- **Backend**: PHP 8.2+ with MySQLi extension
+- **Database**: MySQL / MariaDB 10.x
+- **Frontend**: Tailwind CSS (CDN) + Bootstrap 4
+- **JavaScript**: jQuery 3.3 + Popper.js
+
+<Note>
+  This system uses direct SQL queries via MySQLi. Ensure your MySQL user has appropriate privileges (`SELECT`, `INSERT`, `UPDATE`, `DELETE`) on the `mantenimientos` database.
+</Note>

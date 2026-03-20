@@ -1,0 +1,181 @@
+---
+title: "Database tables"
+description: "Complete reference for all tables in the mantenimientos database, including columns, constraints, and relationships."
+---
+
+The application uses a MariaDB/MySQL database named `mantenimientos` with six tables organized around equipment, locations, and maintenance records.
+
+## Relationship diagram
+
+```
+sedes
+  └── salas (idsede → sedes.id)
+        └── equipos (idsala → salas.id)
+              └── mantenimientos (idequipo → equipos.id)
+
+marcas
+  └── equipos (idmarca → marcas.id)
+
+monitores
+  └── mantenimientos (idmonitor → monitores.id)
+```
+
+<Info>
+  Insert records in this order to satisfy foreign key constraints:
+  `marcas` → `sedes` → `salas` → `equipos`, `monitores` → `mantenimientos`
+</Info>
+
+---
+
+## `sedes`
+
+Top-level organizational unit representing physical campuses or locations.
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| `id` | `int(11)` | No | AUTO_INCREMENT | Primary key |
+| `nombresede` | `varchar(100)` | No | — | Campus or location name |
+
+**Primary key:** `id`
+
+**Seed data:**
+
+| id | nombresede |
+|----|------------|
+| 1 | Bicentenario |
+| 2 | Encarnación |
+| 3 | Casa Obando |
+
+---
+
+## `salas`
+
+Rooms or labs within a sede. Each sala belongs to exactly one sede.
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| `id` | `int(11)` | No | AUTO_INCREMENT | Primary key |
+| `nombresala` | `varchar(100)` | No | — | Room name |
+| `idsede` | `int(11)` | No | — | Foreign key → `sedes.id` |
+
+**Primary key:** `id`  
+**Foreign keys:** `idsede` → `sedes.id`
+
+**Seed data:**
+
+| id | nombresala | idsede |
+|----|------------|--------|
+| 1 | Sala1 | 1 |
+| 4 | sala 3 | 3 |
+| 5 | Sala Ñueva | 2 |
+
+---
+
+## `marcas`
+
+Equipment brands/manufacturers.
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| `id` | `int(11)` | No | AUTO_INCREMENT | Primary key |
+| `nombremarca` | `varchar(100)` | No | — | Brand name |
+
+**Primary key:** `id`
+
+**Seed data:**
+
+| id | nombremarca |
+|----|-------------|
+| 1 | Dell |
+| 3 | Lenovo |
+| 4 | asus |
+| 5 | acer |
+
+---
+
+## `equipos`
+
+Inventory of all physical equipment pieces. Each piece belongs to a room and has a brand.
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| `id` | `int(11)` | No | AUTO_INCREMENT | Primary key |
+| `tipo` | `varchar(100)` | No | — | Equipment type (e.g. "Laptop", "Proyector") |
+| `idmarca` | `int(11)` | No | — | Foreign key → `marcas.id` |
+| `codigo` | `varchar(100)` | No | — | Asset/inventory code |
+| `idsala` | `int(11)` | No | — | Foreign key → `salas.id` |
+| `fechaingreso` | `date` | No | — | Date the equipment was registered |
+| `estado` | `int(11)` | No | `1` | Operational status (see below) |
+
+**Primary key:** `id`  
+**Foreign keys:** `idmarca` → `marcas.id`, `idsala` → `salas.id`
+
+### `estado` values
+
+`estado` is an integer used as a boolean flag:
+
+| Value | Meaning |
+|-------|---------|
+| `1` | Operational (Funcionamiento) |
+| `0` | Under maintenance (Mantenimiento) |
+
+<Note>
+  When a maintenance record is created for a piece of equipment, `estado` should be set to `0`. When maintenance is closed, it should be restored to `1`.
+</Note>
+
+---
+
+## `monitores`
+
+Technicians or monitors responsible for carrying out maintenance work.
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| `id` | `int(11)` | No | AUTO_INCREMENT | Primary key |
+| `nombremonitor` | `varchar(100)` | No | — | Technician's full name |
+
+**Primary key:** `id`
+
+<Info>
+  Despite the Spanish word "monitor" meaning screen/display, in this application `monitores` refers to the personnel who monitor and execute maintenance tasks.
+</Info>
+
+---
+
+## `mantenimientos`
+
+Maintenance records linking equipment to the technician who performed the work. Each record represents a single maintenance event.
+
+| Column | Type | Nullable | Default | Description |
+|--------|------|----------|---------|-------------|
+| `id` | `int(11)` | No | AUTO_INCREMENT | Primary key |
+| `idequipo` | `int(11)` | No | — | Foreign key → `equipos.id` |
+| `tipomantenimiento` | `int(11)` | No | — | Maintenance type (see below) |
+| `problema` | `varchar(100)` | No | — | Brief description of the problem |
+| `fechainicio` | `date` | No | — | Date maintenance started |
+| `idmonitor` | `int(11)` | No | — | Foreign key → `monitores.id` |
+| `fechafin` | `date` | **Yes** | `NULL` | Date maintenance was completed |
+| `descripcion` | `text` | **Yes** | `NULL` | Detailed description of work performed |
+
+**Primary key:** `id`  
+**Foreign keys:** `idequipo` → `equipos.id`, `idmonitor` → `monitores.id`
+
+### `tipomantenimiento` values
+
+`tipomantenimiento` is an integer enum:
+
+| Value | Meaning |
+|-------|---------|
+| `1` | Preventivo — scheduled/preventive maintenance |
+| `2` | Correctivo — corrective maintenance in response to a failure |
+
+### Open vs. closed maintenance
+
+| Field | Open record | Closed record |
+|-------|-------------|---------------|
+| `fechafin` | `NULL` | Date of completion |
+| `descripcion` | `NULL` | Work description |
+
+<Warning>
+  A `NULL` value in `fechafin` means the maintenance event is still **in progress**. Do not interpret it as an error. The `descripcion` field is only populated when the record is closed.
+</Warning>
