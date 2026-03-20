@@ -1,0 +1,81 @@
+{
+  "projectType": "saas",
+  "projectName": "Sistema de Mantenimientos",
+  "projectDescription": "A PHP-based web application for managing equipment maintenance, tracking devices, rooms, locations, and technicians across multiple facilities.",
+  "theme": "linden",
+  "primaryColor": "#6366f1",
+  "lightColor": "#818cf8",
+  "darkColor": "#4338ca",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Overview",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": ["introduction", "quickstart", "installation"]
+          },
+          {
+            "group": "Architecture",
+            "pages": ["architecture/overview", "architecture/database-schema"]
+          }
+        ]
+      },
+      {
+        "tab": "User Guide",
+        "groups": [
+          {
+            "group": "Core Modules",
+            "pages": [
+              "modules/brands",
+              "modules/locations",
+              "modules/rooms",
+              "modules/technicians",
+              "modules/equipment",
+              "modules/maintenance"
+            ]
+          },
+          {
+            "group": "Workflows",
+            "pages": [
+              "workflows/register-equipment",
+              "workflows/schedule-maintenance",
+              "workflows/complete-maintenance"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Reference",
+        "groups": [
+          {
+            "group": "Database",
+            "pages": ["reference/database-tables", "reference/sql-setup"]
+          },
+          {
+            "group": "Configuration",
+            "pages": ["reference/configuration"]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Equipment registry with brand, type, and location tracking",
+    "Preventive and corrective maintenance scheduling",
+    "Multi-location support with sedes (locations) and salas (rooms)",
+    "Technician (monitor) assignment to maintenance tasks",
+    "Automatic next-maintenance date calculation (180-day intervals)",
+    "Equipment status tracking (operational vs. in maintenance)",
+    "Maintenance history view per equipment"
+  ],
+  "publicApiSurface": [
+    "GET/POST /index.php — Brand management (CRUD)",
+    "GET/POST /pages/sedes.php — Location (sede) management (CRUD)",
+    "GET/POST /pages/salas.php — Room (sala) management with sede association (CRUD)",
+    "GET/POST /pages/monitores.php — Technician (monitor) management (CRUD)",
+    "GET/POST /pages/equipos.php — Equipment management with brand/room/status (CRUD)",
+    "GET/POST /pages/mantenimientos.php — Maintenance record management (CRUD)",
+    "GET /pages/ver-mantenimientos.php — View maintenance history for a specific equipment"
+  ]
+}
