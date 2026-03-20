@@ -14,7 +14,7 @@ The system is designed for:
 
 ## Core concepts
 
-<Columns cols={2}>
+<CardGroup cols={2}>
   <Card title="Marcas (Brands)" icon="tag">
     Equipment manufacturers such as Dell, Lenovo, Asus, and Acer. Every piece of equipment must be assigned a brand.
   </Card>
@@ -33,7 +33,7 @@ The system is designed for:
   <Card title="Mantenimientos (Maintenance records)" icon="wrench">
     Logs of maintenance activity performed on equipment, including the problem description, type of maintenance, assigned technician, start date, end date, and resolution notes.
   </Card>
-</Columns>
+</CardGroup>
 
 ## Relationship hierarchy
 
@@ -56,20 +56,20 @@ This means:
 
 ## Key workflows
 
-<Columns cols={2}>
-  <Card title="Register new equipment" icon="plus-circle" href="/quickstart">
+<CardGroup cols={2}>
+  <Card title="Register new equipment" icon="plus-circle" href="/workflows/register-equipment">
     Add a brand, create a location and room, then register the equipment item to that room.
   </Card>
-  <Card title="Log a maintenance job" icon="clipboard-list" href="/architecture/overview">
+  <Card title="Log a maintenance job" icon="clipboard-list" href="/workflows/schedule-maintenance">
     Select the equipment, choose the maintenance type, describe the problem, set the start date, and assign a technician.
   </Card>
-  <Card title="View maintenance history" icon="history" href="/architecture/database-schema">
-    Browse the complete maintenance log filtered by equipment, date range, or technician.
+  <Card title="View maintenance history" icon="clock-rotate-left" href="/modules/equipment">
+    Use the Ver button on any equipment row to see its full maintenance history.
   </Card>
-  <Card title="Track upcoming maintenance" icon="calendar" href="/architecture/database-schema">
-    The system highlights equipment whose next scheduled maintenance date (180 days after the last) is approaching.
+  <Card title="Track upcoming maintenance" icon="calendar" href="/modules/equipment">
+    The system calculates each equipment's next maintenance date as 180 days after the last completed maintenance.
   </Card>
-</Columns>
+</CardGroup>
 
 <Info>
   The system is built with PHP 8.2+, MySQLi, TailwindCSS, and Bootstrap 4. No framework is required — each page is a self-contained PHP file.

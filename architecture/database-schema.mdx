@@ -170,34 +170,39 @@ Stores maintenance job records.
 
 ## 180-day maintenance interval
 
-The equipment page (`pages/equipos.php`) calculates the next scheduled maintenance date for each equipment item. The logic is:
-
-1. Find the most recent `fechainicio` from the `mantenimientos` table for that equipment item.
-2. Add 180 days to that date to get the next scheduled maintenance date.
-3. If the next date has already passed, the equipment is flagged as overdue.
-
-Example SQL to retrieve equipment with their next maintenance dates:
+The equipment page (`pages/equipos.php`) calculates the next scheduled maintenance date for each equipment item at display time using PHP. The main query fetches `MAX(ma.fechafin)` — the date the most recent maintenance was **completed**:
 
 ```sql
-SELECT
-    e.id,
-    e.codigo,
-    e.tipo,
-    m.nombremarca,
-    MAX(mn.fechainicio) AS ultimo_mantenimiento,
-    DATE_ADD(MAX(mn.fechainicio), INTERVAL 180 DAY) AS proximo_mantenimiento
+SELECT e.id, e.codigo, e.tipo, e.idmarca, e.idsala, e.fechaingreso,
+       e.estado, m.nombremarca, s.nombresala, MAX(ma.fechafin) AS fechafin
 FROM equipos e
-JOIN marcas m ON e.idmarca = m.id
-LEFT JOIN mantenimientos mn ON mn.idequipo = e.id
-WHERE e.estado = 1
-GROUP BY e.id, e.codigo, e.tipo, m.nombremarca;
+LEFT OUTER JOIN marcas m ON e.idmarca = m.id
+LEFT OUTER JOIN salas s ON e.idsala = s.id
+LEFT OUTER JOIN mantenimientos ma ON e.id = ma.idequipo
+GROUP BY e.id
 ```
 
-Equipment that has never had a maintenance job will return `NULL` for `ultimo_mantenimiento`, meaning it should be serviced immediately.
+The PHP rendering logic then calculates the next date:
 
-<Warning>
-  Equipment with no maintenance history (`ultimo_mantenimiento IS NULL`) should be treated as overdue. The application logic in `equipos.php` handles this case by flagging the row visually in the equipment table.
-</Warning>
+```php
+$fechault = $row['fechafin'];
+if ($fechault !== NULL) {
+    // Has prior maintenance: next date = last completion date + 180 days
+    $fechasigui = new DateTime($fechault);
+    $fechasigui->add(new DateInterval('P180D'));
+    echo $fechasigui->format('Y-m-d');
+} else {
+    // Never maintained: next date = entry date + 180 days
+    $fechasigui = new DateTime($fechaingreso);
+    $fechasigui->add(new DateInterval('P180D'));
+    echo $fechasigui->format('Y-m-d');
+}
+```
+
+Key points:
+- The interval is based on `fechafin` (completion date of last maintenance), **not** `fechainicio`.
+- If equipment has never been maintained (`fechafin IS NULL`), the next date is calculated from `fechaingreso` (entry date) + 180 days.
+- The application displays the calculated date in plain text — there is no automatic overdue flagging in the UI.
 
 ## Full schema DDL
 
@@ -206,27 +211,27 @@ CREATE TABLE `marcas` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `nombremarca` varchar(100) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 CREATE TABLE `sedes` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `nombresede` varchar(100) NOT NULL,
+  `nombresede` varchar(100) CHARACTER SET latin1 NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE `salas` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `nombresala` varchar(100) NOT NULL,
   `idsede` int(11) NOT NULL,
   PRIMARY KEY (`id`),
-  CONSTRAINT `fk_salas_sedes` FOREIGN KEY (`idsede`) REFERENCES `sedes` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  CONSTRAINT `fksalasede` FOREIGN KEY (`idsede`) REFERENCES `sedes` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 CREATE TABLE `monitores` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `nombremonitor` varchar(100) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 CREATE TABLE `equipos` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -237,9 +242,9 @@ CREATE TABLE `equipos` (
   `fechaingreso` date NOT NULL,
   `estado` int(11) NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`),
-  CONSTRAINT `fk_equipos_marcas` FOREIGN KEY (`idmarca`) REFERENCES `marcas` (`id`),
-  CONSTRAINT `fk_equipos_salas` FOREIGN KEY (`idsala`) REFERENCES `salas` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  CONSTRAINT `fkequipomarca` FOREIGN KEY (`idmarca`) REFERENCES `marcas` (`id`),
+  CONSTRAINT `fkequiposala` FOREIGN KEY (`idsala`) REFERENCES `salas` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 CREATE TABLE `mantenimientos` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -251,7 +256,7 @@ CREATE TABLE `mantenimientos` (
   `fechafin` date DEFAULT NULL,
   `descripcion` text,
   PRIMARY KEY (`id`),
-  CONSTRAINT `fk_mantenimientos_equipos` FOREIGN KEY (`idequipo`) REFERENCES `equipos` (`id`),
-  CONSTRAINT `fk_mantenimientos_monitores` FOREIGN KEY (`idmonitor`) REFERENCES `monitores` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  CONSTRAINT `fkmantenimientoequipo` FOREIGN KEY (`idequipo`) REFERENCES `equipos` (`id`),
+  CONSTRAINT `fkmantenimientomonitor` FOREIGN KEY (`idmonitor`) REFERENCES `monitores` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 ```

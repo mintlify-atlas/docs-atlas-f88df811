@@ -46,36 +46,40 @@ flowchart LR
 
 ## Navigation structure
 
-`layout/header.php` renders a Bootstrap 4 navbar with links to every module:
+`layout/header.php` renders a top navigation bar with links to every module. There are six nav items:
 
 | Label | Target file |
 |-------|-------------|
-| Marcas | `index.php` |
-| Sedes | `pages/sedes.php` |
-| Salas | `pages/salas.php` |
-| Monitores | `pages/monitores.php` |
-| Equipos | `pages/equipos.php` |
-| Mantenimientos | `pages/mantenimientos.php` |
-| Ver Mantenimientos | `pages/ver-mantenimientos.php` |
+| Inicio | `../index.php` (home link) |
+| Marcas | `/index.php` |
+| Monitores/Personas | `/pages/monitores.php` |
+| Sedes | `/pages/sedes.php` |
+| Salas | `/pages/salas.php` |
+| Equipos | `/pages/equipos.php` |
+| Mantenimientos | `/pages/mantenimientos.php` |
+
+<Note>
+  There is no dedicated "Ver Mantenimientos" nav item. The maintenance history page (`/pages/ver-mantenimientos.php`) is accessed via the **Ver** button on each row of the equipment table.
+</Note>
 
 ## Form submission pattern
 
 All data mutations follow a consistent pattern within the same PHP file:
 
-<Columns cols={2}>
+<CardGroup cols={2}>
   <Card title="Create" icon="plus">
     An HTML form POSTs to the same page. PHP checks `$_SERVER['REQUEST_METHOD'] === 'POST'`, reads `$_POST` values, runs an `INSERT` query, then redirects back with `header('Location: ...')`.
   </Card>
-  <Card title="Edit" icon="pencil">
-    Clicking an edit button appends an `?edit=ID` query string. PHP detects `$_GET['edit']`, fetches the record, and pre-fills the form fields for the user to modify.
+  <Card title="Edit (load)" icon="pencil">
+    Clicking an edit button sends `GET ?id=X&edit=true`. PHP detects `isset($_GET['edit'])`, fetches the record by `$_GET['id']`, and pre-fills the form fields.
   </Card>
-  <Card title="Update" icon="floppy-disk">
-    The pre-filled form POSTs back to the page. PHP detects a hidden `id` field in `$_POST` and runs an `UPDATE` query instead of an `INSERT`.
+  <Card title="Update (save)" icon="floppy-disk">
+    The pre-filled form POSTs back to the same page. PHP reads `$_GET['id'] ?? 0` to determine whether to run `UPDATE` (id > 0) or `INSERT` (id = 0).
   </Card>
   <Card title="Delete" icon="trash">
-    Clicking a delete button appends `?delete=ID`. PHP detects `$_GET['delete']` and runs a `DELETE` query, then redirects.
+    Clicking a delete button sends `GET ?id=X` (without an `edit` parameter). PHP detects that `$_GET['edit']` is not set and runs a `DELETE` query, then redirects.
   </Card>
-</Columns>
+</CardGroup>
 
 <Warning>
   The current implementation uses `$_GET` for delete actions without CSRF protection or confirmation tokens. In a production deployment you should add a confirmation step and a CSRF token check.
@@ -87,13 +91,14 @@ There is no router or front controller. URL paths map directly to PHP files:
 
 | URL | Module |
 |-----|--------|
-| `/` or `/index.php` | Brand management |
+| `/` or `/index.php` | Brand management (home page) |
+| `/pages/marcas.php` | Brand management (alternate URL, identical to `index.php`) |
 | `/pages/sedes.php` | Location management |
 | `/pages/salas.php` | Room management |
 | `/pages/monitores.php` | Technician management |
 | `/pages/equipos.php` | Equipment management |
 | `/pages/mantenimientos.php` | Maintenance management |
-| `/pages/ver-mantenimientos.php` | Maintenance history |
+| `/pages/ver-mantenimientos.php?id=X` | Maintenance history for equipment ID X |
 
 <Note>
   Because routing is file-based, adding a new module means creating a new PHP file in the appropriate directory and adding a link to `layout/header.php`.
